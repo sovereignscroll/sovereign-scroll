@@ -1,5 +1,5 @@
-// Sovereign Scroll — content script
-// Universal feed filter with aggressive scanning
+// Social Feed Filter — content script
+// Supports: Substack Notes, Instagram, Facebook, X/Twitter
 (function () {
   const STORAGE_KEY = 'substackFilterWords';
   let blockedTerms = [];
@@ -17,106 +17,102 @@
     return blockedTerms.some(term => lower.includes(term));
   }
 
-  // Walk up from element to find a "post" — a list item among siblings
-  function findPostContainer(el) {
-    let current = el;
-    let best = null;
+  function getHost() {
+    const h = location.hostname;
+    if (h.includes('substack.com')) return 'substack';
+    if (h.includes('instagram.com')) return 'instagram';
+    if (h.includes('facebook.com')) return 'facebook';
+    if (h.includes('x.com') || h.includes('twitter.com')) return 'x';
+    return 'unknown';
+  }
 
-    while (current && current !== document.body) {
-      const parent = current.parentElement;
-      if (!parent) break;
-
-      const siblings = parent.children.length;
-      const rect = current.getBoundingClientRect();
-      const height = rect.height;
-
-      // A post container: has siblings, reasonable visual height
-      if (siblings >= 2 && height > 50 && height < 2000) {
-        best = current;
-      }
-
-      // Stop if parent is massive
-      if (best && parent.getBoundingClientRect().height > 5000) {
-        break;
-      }
-
-      current = parent;
+  // Platform-specific selectors for feed posts
+  function getPostSelectors(platform) {
+    switch (platform) {
+      case 'substack':
+        return [
+          '[class*="note"]', '[class*="Note"]', '[data-testid*="note"]',
+          'article', '.feed-note', '.note-card',
+          '[class*="FeedNote"]', '[class*="feedNote"]'
+        ];
+      case 'instagram':
+        return [
+          'article', '[role="presentation"]',
+          '[class*="x1lliihq"]', // IG feed post containers
+          'div[style] > div > div > article'
+        ];
+      case 'facebook':
+        return [
+          '[data-pagelet*="FeedUnit"]', '[role="article"]',
+          'div[data-ad-preview]', '.x1yztbdb',
+          '[class*="userContent"]'
+        ];
+      case 'x':
+        return [
+          'article', '[data-testid="tweet"]',
+          '[data-testid="cellInnerDiv"]'
+        ];
+      default:
+        return ['article'];
     }
-
-    return best;
   }
 
-  function scanAndFilter() {
-    if (blockedTerms.length === 0) return;
+  function filterPosts() {
+    const platform = getHost();
+    const selectors = getPostSelectors(platform);
+    const candidates = new Set();
 
-    // Get ALL divs, spans, p, article, section on the page
-    const allElements = document.querySelectorAll('div, span, p, article, section, li, a, h1, h2, h3, h4');
+    selectors.forEach(sel => {
+      try {
+        document.querySelectorAll(sel).forEach(el => candidates.add(el));
+      } catch (e) {}
+    });
 
-    const checked = new Set();
-    const toHide = new Set();
-
-    allElements.forEach(el => {
-      // Skip already filtered
-      if (el.closest('[data-sovereign-filtered]')) return;
-      // Skip tiny elements
-      if (!el.textContent || el.textContent.length < 3) return;
-
-      // Check direct text (not children's text) first for efficiency
-      // But also check full textContent for phrases split across children
-      const text = el.textContent;
-      if (!containsBlocked(text)) return;
-
-      // Found blocked content — find the post container
-      const container = findPostContainer(el);
-      if (container && !checked.has(container)) {
-        checked.add(container);
-        // Verify the container itself has the blocked text
-        if (containsBlocked(container.textContent)) {
-          toHide.add(container);
+    // Also grab feed area children
+    const feedAreas = document.querySelectorAll(
+      '[class*="feed"], [class*="Feed"], [role="feed"], [role="main"], main'
+    );
+    feedAreas.forEach(feed => {
+      Array.from(feed.children).forEach(child => {
+        if (child.tagName === 'DIV' || child.tagName === 'ARTICLE') {
+          candidates.add(child);
         }
+      });
+    });
+
+    candidates.forEach(el => {
+      const text = el.textContent || el.innerText || '';
+      if (containsBlocked(text)) {
+        el.style.display = 'none';
+        el.dataset.substackFiltered = 'true';
       }
     });
-
-    toHide.forEach(el => {
-      el.style.display = 'none';
-      el.setAttribute('data-sovereign-filtered', 'true');
-    });
   }
 
-  function resetAndFilter() {
-    document.querySelectorAll('[data-sovereign-filtered]').forEach(el => {
-      el.style.display = '';
-      el.removeAttribute('data-sovereign-filtered');
+  function observe() {
+    const observer = new MutationObserver((mutations) => {
+      let hasNew = false;
+      for (const m of mutations) {
+        if (m.addedNodes.length > 0) { hasNew = true; break; }
+      }
+      if (hasNew) filterPosts();
     });
-    scanAndFilter();
+    observer.observe(document.body, { childList: true, subtree: true });
   }
 
   chrome.storage.onChanged.addListener((changes) => {
     if (changes[STORAGE_KEY]) {
       blockedTerms = (changes[STORAGE_KEY].newValue || []).map(t => t.toLowerCase().trim()).filter(Boolean);
-      resetAndFilter();
+      document.querySelectorAll('[data-substack-filtered]').forEach(el => {
+        el.style.display = '';
+        delete el.dataset.substackFiltered;
+      });
+      filterPosts();
     }
   });
 
-  // Aggressive: scan on load, on mutations, AND on a timer
-  // because some sites (Instagram, X) do weird lazy rendering
   loadTerms(() => {
-    scanAndFilter();
-
-    // Watch for new content
-    const observer = new MutationObserver(() => {
-      setTimeout(scanAndFilter, 500);
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    // Also poll every 2 seconds for content that slips through
-    setInterval(scanAndFilter, 2000);
-
-    // Also scan on scroll (new content loads)
-    let scrollTimer;
-    window.addEventListener('scroll', () => {
-      clearTimeout(scrollTimer);
-      scrollTimer = setTimeout(scanAndFilter, 300);
-    }, { passive: true });
+    filterPosts();
+    observe();
   });
 })();
