@@ -2,23 +2,15 @@
   "manifest_version": 3,
   "name": "Sovereign Scroll",
   "version": "1.1.0",
-  "description": "Hide posts containing specific words or phrases on Substack, Instagram, Facebook, and X",
+  "description": "Hide Substack Notes containing specific words or phrases",
   "permissions": ["storage"],
   "host_permissions": [
-    "https://substack.com/*",
-    "https://*.instagram.com/*",
-    "https://*.facebook.com/*",
-    "https://*.x.com/*",
-    "https://*.twitter.com/*"
+    "https://substack.com/*"
   ],
   "content_scripts": [
     {
       "matches": [
-        "https://substack.com/*",
-        "https://*.instagram.com/*",
-        "https://*.facebook.com/*",
-        "https://*.x.com/*",
-        "https://*.twitter.com/*"
+        "https://substack.com/*"
       ],
       "js": ["filter.js"],
       "run_at": "document_idle"
