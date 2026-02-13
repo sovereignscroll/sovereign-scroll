@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 320px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    padding: 16px;
+    background: #faf9f7;
+    color: #2c2c2c;
+  }
+  h1 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: #1a1a1a;
+  }
+  .input-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  input[type="text"] {
+    flex: 1;
+    padding: 8px 10px;
+    border: 1px solid #d4d4d4;
+    border-radius: 6px;
+    font-size: 13px;
+    outline: none;
+  }
+  input[type="text"]:focus { border-color: #e07c4f; }
+  button {
+    padding: 8px 14px;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  .btn-add {
+    background: #e07c4f;
+    color: white;
+  }
+  .btn-add:hover { background: #c96a40; }
+  .terms-list {
+    max-height: 260px;
+    overflow-y: auto;
+    margin-bottom: 8px;
+  }
+  .term {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background: white;
+    border: 1px solid #e8e8e8;
+    border-radius: 6px;
+    margin-bottom: 4px;
+    font-size: 13px;
+  }
+  .term span { word-break: break-word; }
+  .btn-remove {
+    background: none;
+    color: #999;
+    font-size: 16px;
+    padding: 2px 6px;
+    min-width: auto;
+  }
+  .btn-remove:hover { color: #e05050; }
+  .empty {
+    text-align: center;
+    color: #999;
+    font-size: 12px;
+    padding: 20px 0;
+  }
+  .count {
+    font-size: 11px;
+    color: #999;
+    text-align: right;
+  }
+  .tip-section {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid #e8e8e8;
+    text-align: center;
+  }
+  .tip-btn {
+    display: inline-block;
+    padding: 8px 18px;
+    background: #e07c4f;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .tip-btn:hover { background: #c96a40; }
+  .tip-addr {
+    margin-top: 6px;
+    font-size: 9px;
+    color: #aaa;
+    word-break: break-all;
+    cursor: pointer;
+  }
+  .tip-addr:hover { color: #666; }
+  .tip-copied {
+    color: #e07c4f !important;
+  }
+</style>
+</head>
+<body>
+  <h1>Sovereign Scroll</h1>
+  <div class="input-row">
+    <input type="text" id="newTerm" placeholder="Word or phrase to block..." />
+    <button class="btn-add" id="addBtn">Add</button>
+  </div>
+  <div class="terms-list" id="termsList"></div>
+  <div class="count" id="count"></div>
+
+  <div class="tip-section">
+    <a href="https://buymeacoffee.com/annarn" target="_blank" class="tip-btn">Buy me a coffee</a>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
